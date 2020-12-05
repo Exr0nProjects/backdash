@@ -1,43 +1,18 @@
 #include <SDL2/SDL.h>
 #include <X11/Xlib.h>
+#include <vector>
 
-//struct Textures
-//{
-//    SDL_Texture** texture;
-//    size_t size;
-//};
-//
-//struct View
-//{
-//    int speed;
-//    Textures textures;
-//    SDL_Rect* rect;
-//    View* next;
-//};
-//
-//struct Video
-//{
-//    Display* x11d;
-//    SDL_Window* window;
-//    SDL_Renderer* renderer;
-//};
-//
-//static Video Setup()
-//{
-//    Video self;
-//    self.x11d = XOpenDisplay(NULL);
-//    const Window x11w = RootWindow(self.x11d, DefaultScreen(self.x11d));
-//    SDL_Init(SDL_INIT_VIDEO);
-//    self.window = SDL_CreateWindowFrom((void*)x11w);
-//    self.renderer = SDL_CreateRenderer(self.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-//    return self;
-//}
-//
-//int main()
-//{
-//    //Video video = Setup();
-//    //auto display = XOpenDisplay(NULL);
-//}
+struct Object
+{
+}
+
+struct Body: Object
+{
+}
+
+struct Collider: Object
+{
+}
 
 int main()
 {
@@ -53,9 +28,7 @@ int main()
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window *window = SDL_CreateWindowFrom((void*)x11w);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1024, 768);
-
-
+    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 1080, 1920);
 
     SDL_Rect r;
     r.w = 200;
