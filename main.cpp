@@ -64,8 +64,8 @@ public:
     color_t color;
     std::vector<std::unique_ptr<Renderable> > assets;
     // constructors
-    Layer(): speed(0), ypos(0), color({0xff, 0, 0, 0}), assets() {};
-    Layer(float speed, float ypos, color_t color): speed(speed), ypos(ypos), color(color) {}
+    Layer(): speed(0), scale(0), color({0xff, 0, 0, 0}), assets() {};
+    Layer(float speed, float scale, color_t color): speed(speed), scale(scale), color(color) {}
     // methods
     void render(SDL_Renderer* renderer)
     {
@@ -79,12 +79,22 @@ int main()
     //std::array<Layer, NUM_LAYERS> layers = {{ {0.1, 1000, {0x44, 0x33, 0x33, 0xff} }, { 0.4, 1000, {0x05, 0x55, 0x05, 0xff} } }};
     std::array<Layer, NUM_LAYERS> layers;
     for (int i=0; i<NUM_LAYERS; ++i)
-        layers[i] = { 0.1*(i+1), 800, layer_colors[i] };
-    for (int i=0; i<40; ++i)
-        layers[0].assets.emplace_back(new Triangle(300*i, 1200, 700+rng(-100, 100), 400+rng(-200, 200)));
-        //layers[0].assets.push_back(std::make_unique<Triangle>(100*i, 1200, 700+rng(-100, 100), 400+rng(-200, 200)) );
-    for (int i=0; i<90; ++i)
-        layers[1].assets.emplace_back( new Triangle(50*i, 1200, 70+rng(-20, 20), 120+rng(-20, 20)) );
+    {
+        layers[i] = { 0.1*(i+1), 1200, layer_colors[i] };
+        const int spacing = 50 * i;
+        const int bottom = 1200;
+        const int height = 70 * i;
+        const int height_noise = 20*i;
+        const int width = 40 + 80 * i;
+        const int width_noise = 20*i;
+        for (int j=-5; j<WIDTH / spacing + 5; ++j)
+            layers[i].assets.emplace_back(new Triangle(spacing*i, bottom, height+rng(-height_noise, height_noise), width+rng(-width_noise, width_noise)));
+    }
+    //for (int i=0; i<40; ++i)
+    //    layers[0].assets.emplace_back(new Triangle(300*i, 1200, 700+rng(-100, 100), 400+rng(-200, 200)));
+    //    //layers[0].assets.push_back(std::make_unique<Triangle>(100*i, 1200, 700+rng(-100, 100), 400+rng(-200, 200)) );
+    //for (int i=0; i<90; ++i)
+    //    layers[1].assets.emplace_back( new Triangle(50*i, 1200, 70+rng(-20, 20), 120+rng(-20, 20)) );
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
