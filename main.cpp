@@ -6,12 +6,16 @@
 #include <thread>
 #include <array>
 #include <memory>
+#include <iterator>
 #include <iostream>
 #include <algorithm>
 
 // TODO: auto-get height https://stackoverflow.com/questions/33393528/how-to-get-screen-size-in-sdl
 const int WIDTH = 3000;
 const int HEIGHT = 1920;
+
+const auto FRAME_PERIOD = std::chrono::milliseconds(10);
+const float SPED = 0.01*FRAME_PERIOD.count();
 
 const int CENTER_X = 800;
 const int CENTER_Y = 600;
@@ -22,7 +26,7 @@ typedef std::array<unsigned char, 4> color_t;
 
 const size_t NUM_LAYERS = 6;
 const color_t layer_colors[NUM_LAYERS] = {
-    { 33,  88,  197, 0xff },
+    { 50,  90,  240, 0xff },
     { 97,  155, 255, 0xff },
     { 109, 178, 255, 0xff },
     { 128, 187, 255, 0xff },
@@ -60,7 +64,7 @@ public:
 class Layer
 {
 public:
-    float speed, ypos;
+    float speed, scale;
     color_t color;
     std::vector<std::unique_ptr<Renderable> > assets;
     // constructors
@@ -76,32 +80,27 @@ public:
 
 int main()
 {
-    //std::array<Layer, NUM_LAYERS> layers = {{ {0.1, 1000, {0x44, 0x33, 0x33, 0xff} }, { 0.4, 1000, {0x05, 0x55, 0x05, 0xff} } }};
+    // construct procedural layers
     std::array<Layer, NUM_LAYERS> layers;
-    for (int i=0; i<NUM_LAYERS; ++i)
+    for (int i=1; i<=NUM_LAYERS; ++i)
     {
-        layers[i] = { 0.1*(i+1), 1200, layer_colors[i] };
-        const int spacing = 50 * i;
+        layers[i-1] = { SPED*(NUM_LAYERS-i+1), 1200, layer_colors[i-1] };
+        const int spacing = 200 * i - 160;
         const int bottom = 1200;
-        const int height = 70 * i;
-        const int height_noise = 20*i;
-        const int width = 40 + 80 * i;
+        const int height = 90 * i;
+        const int height_noise = 0*i;
+        const int width = spacing * 1.30;
         const int width_noise = 20*i;
-        for (int j=-5; j<WIDTH / spacing + 5; ++j)
-            layers[i].assets.emplace_back(new Triangle(spacing*i, bottom, height+rng(-height_noise, height_noise), width+rng(-width_noise, width_noise)));
+        for (int j=-5; j< WIDTH / spacing + 5; ++j)
+            layers[i-1].assets.emplace_back(new Triangle(spacing*j, bottom, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)));
     }
-    //for (int i=0; i<40; ++i)
-    //    layers[0].assets.emplace_back(new Triangle(300*i, 1200, 700+rng(-100, 100), 400+rng(-200, 200)));
-    //    //layers[0].assets.push_back(std::make_unique<Triangle>(100*i, 1200, 700+rng(-100, 100), 400+rng(-200, 200)) );
-    //for (int i=0; i<90; ++i)
-    //    layers[1].assets.emplace_back( new Triangle(50*i, 1200, 70+rng(-20, 20), 120+rng(-20, 20)) );
 
+    // initialize window
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s", SDL_GetError());
         return 3;
     }
-
     const auto x11d = XOpenDisplay(NULL);
     const Window x11w = RootWindow(x11d, DefaultScreen(x11d));
     SDL_Init(SDL_INIT_VIDEO);
@@ -109,6 +108,7 @@ int main()
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, WIDTH, HEIGHT);
 
+    // event loop
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
         // clear, I guess?
@@ -116,9 +116,7 @@ int main()
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
         SDL_RenderClear(renderer);
         // draw the scene
-        for (auto &layer : layers) layer.render(renderer);
-        //for (auto &tri : layer)
-        //    tri.render(renderer, 0.1, 0x32, 0x6c, 0xcc);
+        for (auto it=layers.rbegin(); it != layers.rend(); ++it) it->render(renderer);
         // draw sky
         for (int i=0; i<LAYERS; ++i)
             filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i, 0xff, 0xee, 0x20, 0x40*i/LAYERS);
@@ -126,9 +124,10 @@ int main()
         SDL_SetRenderTarget(renderer, NULL);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(FRAME_PERIOD);
     }
+
+    // clean up
     SDL_DestroyRenderer(renderer);
     SDL_Quit();
 }
