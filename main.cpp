@@ -1,14 +1,16 @@
 #include <SDL2/SDL.h>
 #include <X11/Xlib.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
-#include <vector>
+//#include <vector>
 #include <chrono>
 #include <thread>
+#include <deque>
 #include <array>
 #include <memory>
 #include <iterator>
 #include <iostream>
 #include <algorithm>
+#include <functional>
 // TODO: auto-get height https://stackoverflow.com/questions/33393528/how-to-get-screen-size-in-sdl
 
 // config
@@ -16,7 +18,8 @@ const int WIDTH = 3000;
 const int HEIGHT = 1920;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
-const float SPED = 0.01*FRAME_PERIOD.count();
+const double SPED = 1.5*FRAME_PERIOD.count();
+//const double SPED = 0.01*FRAME_PERIOD.count();
 
 const int CENTER_X = 800;
 const int CENTER_Y = 600;
@@ -41,41 +44,56 @@ int rng(int l, int r)
 class Renderable
 {
 public:
-    float x, y, w, h;
+    double x, y, w, h;
     // constructors
-    Renderable(float x, float y, float w, float h): x(x), y(y), w(w), h(h) {}
+    Renderable(double x, double y, double w, double h): x(x), y(y), w(w), h(h) {}
     // methods
-    virtual void render(SDL_Renderer* renderer, float speed, color_t color) = 0;
+    virtual void render(SDL_Renderer* renderer, double speed, color_t color)
+    {
+        std::cerr << "Attempted to render empty renderable!" << std::endl;
+    }
+    bool completed() const { return x + w < -10; };
+    bool started() const { return x > WIDTH + 10; };
 };
 
 class Triangle : public Renderable
 {
 public:
     // constructors
-    Triangle(float x, float y, float w, float h): Renderable(x, y, w, h) {}
+    Triangle(double x, double y, double w, double h): Renderable(x, y, w, h) {}
     // methods
-    void render(SDL_Renderer* renderer, float speed, color_t color)
+    void render(SDL_Renderer* renderer, double speed, color_t color)
     {
         filledTrigonRGBA(renderer, x, y, x+w/2, y-h, x+w, y, color[0], color[1], color[2], color[3]);
         x = (x - speed);
-        if (x+w < 0) x += WIDTH+w;   // TODO sketchy mod
+        //if (x+w < 0) x += WIDTH+w;   // TODO sketchy mod
     }
 };
 
 class Layer
 {
 public:
-    float speed, scale;
+    double speed, bottom, scale, spacing;
     color_t color;
-    std::vector<std::unique_ptr<Renderable> > assets;
+    std::function<Renderable*(double, double)> gen;
+    std::deque<std::unique_ptr<Renderable> > assets;    // invariant: sorted by x
     // constructors
-    Layer(): speed(0), scale(0), color({0xff, 0, 0, 0}), assets() {};
-    Layer(float speed, float scale, color_t color): speed(speed), scale(scale), color(color) {}
+    Layer(double speed, double bottom, double scale, color_t color,
+            double spacing, std::function<Renderable*(double, double)> generator):
+        speed(speed), bottom(bottom), scale(scale), color(color),
+        spacing(spacing), gen(generator) {}
+    Layer(double speed, double bottom, double scale, color_t color):
+        Layer(speed, bottom, scale, color, 0., nullptr) {}
+    Layer(): Layer(0, 0, 0, {0xff, 0, 0, 0}) {};
     // methods
     void render(SDL_Renderer* renderer)
     {
+        while (assets.size() && assets.front()->completed()) assets.pop_front();
         for (auto &asset : assets)
             asset->render(renderer, speed, color);
+        if (gen)
+            while (assets.size() && assets.back()->started())
+                assets.emplace_back(gen(assets.back()->x + spacing, bottom));
     }
 };
 
@@ -85,15 +103,20 @@ int main()
     std::array<Layer, NUM_LAYERS> layers;
     for (int i=1; i<=NUM_LAYERS; ++i)
     {
-        layers[i-1] = { SPED*(NUM_LAYERS-i+1), 1200, layer_colors[i-1] };
-        const int spacing = 200 * i - 160;
-        const int bottom = 1200;
+        const double spacing = 200 * i - 160;
+        const double bottom = 1200;
         const int height = 90 * i;
         const int height_noise = 0*i;
         const int width = spacing * 1.30;
         const int width_noise = 20*i;
-        for (int j=-5; j< WIDTH / spacing + 5; ++j)
-            layers[i-1].assets.emplace_back(new Triangle(spacing*j, bottom, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)));
+        //layers[i-1] = { SPED*(NUM_LAYERS-i+1), 1200, layer_colors[i-1], bottom, spacing, [&]{ return new Triangle(
+        //        spacing*j, bottom, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)) } };
+        layers[i-1](SPED*(NUM_LAYERS-i+1), 1200., layer_colors[i-1], bottom, spacing,
+            [&](double x, double y) -> Renderable* { return new Triangle(
+                x, y, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
+            ); });
+        //for (int j=-5; j< WIDTH / spacing + 5; ++j)
+        //    layers[i-1].assets.emplace_back(new Triangle(spacing*j, bottom, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)));
     }
 
     // initialize window
