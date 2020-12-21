@@ -9,8 +9,9 @@
 #include <iterator>
 #include <iostream>
 #include <algorithm>
-
 // TODO: auto-get height https://stackoverflow.com/questions/33393528/how-to-get-screen-size-in-sdl
+
+// config
 const int WIDTH = 3000;
 const int HEIGHT = 1920;
 
@@ -107,6 +108,7 @@ int main()
     SDL_Window *window = SDL_CreateWindowFrom((void*)x11w);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, WIDTH, HEIGHT);
+    SDL_EnableScreenSaver();    // https://stackoverflow.com/a/39917503
 
     // event loop
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
