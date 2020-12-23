@@ -20,7 +20,6 @@ const int HEIGHT = 1920;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
 const double SPED = 0.05*FRAME_PERIOD.count();
-//const double SPED = 0.01*FRAME_PERIOD.count();
 
 const int CENTER_X = 800;
 const int CENTER_Y = 600;
@@ -41,15 +40,6 @@ const color_t COLORS[NUM_LAYERS+NUM_BG_COLORS] = {
     {  64, 107, 191, 0xff },    // background gradient top
     { 200, 109, 202, 0xff }     // background gradient bot
 };
-// background
-//const int bg_width  = 3;    // width, height must be atleast 3 (1 color pixel + 2 edge padding pixels)
-//const int bg_height = 4;    // apparently, this is bc windows bad.
-//const unsigned bggradient[] = {
-//    0x0000ffff, 0x0000ffff, 0x00f0ffff,
-//    0x0000ffff, 0x0000ffff, 0x0000ffff,
-//    0xff0000ff, 0xff0000ff, 0xff0000ff,
-//    0xff0000ff, 0xff0000ff, 0xff0000ff,
-//};
 
 int rng(int l, int r)
 { return rand() % (r-l+1) + l; }
@@ -111,20 +101,23 @@ public:
         // push queue
         if (gen)
             while (!assets.size() || assets.back()->started())
-                assert(assets.size() < 1e6),    // TODO: this is unsafe
                 assets.emplace_back(gen((assets.size()?assets.back()->x:-10) + spacing, bottom));
     }
 };
 
-void sigintHandler(int sig)
+static SDL_Renderer * renderer;
+
+void quit(int sig)
 {
-    printf("\nDying a horrible death..\n");
+    SDL_DestroyRenderer(renderer);
+    SDL_Quit();
     exit(sig);
 }
 
 int main()
 {
-    signal(SIGINT, sigintHandler);  // otherwise this doesn't respond to C-c for some reason
+    signal(SIGINT, quit);  // otherwise this doesn't respond to C-c for some reason
+
     // construct procedural layers
     std::array<Layer, NUM_LAYERS> layers;
     for (int i=1; i<=NUM_LAYERS; ++i)
@@ -142,7 +135,7 @@ int main()
             ); });
     }
 
-    // initialize window
+    // init window
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s", SDL_GetError());
@@ -152,7 +145,7 @@ int main()
     const Window x11w = RootWindow(x11d, DefaultScreen(x11d));
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window *window = SDL_CreateWindowFrom((void*)x11w);
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);    // global so clean up func can access it
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, WIDTH, HEIGHT);
     SDL_EnableScreenSaver();                        // allow display to slee pwhile running: https://stackoverflow.com/a/39917503
     // init background texture
@@ -175,19 +168,16 @@ int main()
     // event loop
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
-        // clear, I guess?
-        SDL_SetRenderTarget(renderer, texture);
-        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
-        SDL_RenderClear(renderer);
-        // render background gradient: https://stackoverflow.com/a/42234816
+        // draw background gradient to clear screen: https://stackoverflow.com/a/42234816
         SDL_RenderCopy(renderer, background, &center, NULL);
 
-        // draw the scene
-        for (auto it=layers.rbegin(); it != layers.rend(); ++it) it->render(renderer);
-        // draw sky
-        for (int i=0; i<LAYERS; ++i)
+        // draw the foreground
+        SDL_SetRenderTarget(renderer, texture);
+        for (auto it=layers.rbegin(); it != layers.rend(); ++it) it->render(renderer);  // render layers
+        for (int i=0; i<LAYERS; ++i)                                                    // render sun
             filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i, 0xff, 0xee, 0x20, 0x40*i/LAYERS);
-        // draw to the screen?
+
+        // draw to the screen
         SDL_SetRenderTarget(renderer, NULL);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
@@ -195,7 +185,6 @@ int main()
     }
 
     // clean up
-    SDL_DestroyRenderer(renderer);
-    SDL_Quit();
+    quit(0);
 }
 
