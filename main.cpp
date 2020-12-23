@@ -1,7 +1,6 @@
 #include <SDL2/SDL.h>
 #include <X11/Xlib.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
-//#include <vector>
 #include <cassert>
 #include <csignal>
 #include <chrono>
@@ -68,7 +67,6 @@ public:
     {
         filledTrigonRGBA(renderer, x, y, x+w/2, y-h, x+w, y, color[0], color[1], color[2], color[3]);
         x = (x - speed);
-        //if (x+w < 0) x += WIDTH+w;   // TODO sketchy mod
     }
 };
 
@@ -90,8 +88,6 @@ public:
     // methods
     void render(SDL_Renderer* renderer)
     {
-        //printf("rendering %d assets of %x\n\n\n\n", assets.size(), this);
-        //printf("%x: %3d     ", this, assets.size());
         // pop queue
         while (assets.size() && assets.front()->completed()) assets.pop_front();
         // draw
@@ -118,14 +114,14 @@ int main()
     std::array<Layer, NUM_LAYERS> layers;
     for (int i=1; i<=NUM_LAYERS; ++i)
     {
+        // set procedural constants
         const double spacing = 200 * i - 160;
         const double bottom = 1200;
         const int height = 90 * i;
         const int height_noise = 0*i;
         const int width = spacing * 1.30;
         const int width_noise = 20*i;
-        //layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 1200., layer_colors[i-1], spacing,
-        layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom+(double)(i), 1200., layer_colors[i-1], spacing,
+        layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 1200., layer_colors[i-1], spacing,
             [=](double x, double y) -> Renderable* { return new Triangle(
                 x, y, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
             ); });
