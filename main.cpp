@@ -147,10 +147,11 @@ int main()
     SDL_Window *window = SDL_CreateWindowFrom((void*)x11w);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);    // global so clean up func can access it
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, WIDTH, HEIGHT);
-    SDL_EnableScreenSaver();                        // allow display to slee pwhile running: https://stackoverflow.com/a/39917503
+    SDL_EnableScreenSaver();                            // allow display to sleep while running: https://stackoverflow.com/a/39917503
+
     // init background texture
-    const SDL_Rect center = {1, 1, 1, NUM_BG_COLORS};    // the center mask of the background to display
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"1"); // low res texture based gradient: https://stackoverflow.com/a/42234816
+    const SDL_Rect center = {1, 1, 1, NUM_BG_COLORS};   // the center mask of the background to display
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"1");     // low res texture based gradient: https://stackoverflow.com/a/42234816
     SDL_Texture * background = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,
     SDL_TEXTUREACCESS_STREAMING,3,NUM_BG_COLORS+2);
     {
@@ -161,7 +162,6 @@ int main()
             bgpixels[3*NUM_BG_COLORS+i] = collapse_color(COLORS[NUM_LAYERS+NUM_BG_COLORS-1]);   // fill bot band
         for (int j=0; j<NUM_BG_COLORS; ++j) for (int i=0; i<3; ++i)                             // fill center (visible area + sides)
             bgpixels[(j+1)*3+i] = collapse_color(COLORS[NUM_LAYERS+j]);
-        //memcpy(bgpixels, bggradient, sizeof bggradient);
         SDL_UnlockTexture(background);
     }
 
@@ -169,10 +169,10 @@ int main()
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
         // draw background gradient to clear screen: https://stackoverflow.com/a/42234816
+        SDL_SetRenderTarget(renderer, texture);
         SDL_RenderCopy(renderer, background, &center, NULL);
 
         // draw the foreground
-        SDL_SetRenderTarget(renderer, texture);
         for (auto it=layers.rbegin(); it != layers.rend(); ++it) it->render(renderer);  // render layers
         for (int i=0; i<LAYERS; ++i)                                                    // render sun
             filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i, 0xff, 0xee, 0x20, 0x40*i/LAYERS);
