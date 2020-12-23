@@ -73,7 +73,7 @@ public:
     // methods
     void render(double speed, color_t color)
     {
-        filledTrigonColor(renderer, x, y, x+w/2, y-h, x+w, y, collapse_color(color));
+        filledTrigonRGBA(renderer, x, y, x+w/2, y-h, x+w, y, color[0], color[1], color[2], color[3]);
         x = (x - speed);
     }
 };
@@ -112,9 +112,16 @@ public:
 void renderCelestialBody(double x, double y)
 {
     for (int i=0; i<LAYERS; ++i)
-        filledCircleColor(renderer, CENTER_X, CENTER_Y, RADIUS*i,
-                collapse_color(COLORS[NUM_LAYERS+NUM_BG_COLORS]) & ~0xff | 0x30*i/LAYERS);
-    filledCircleColor(renderer, CENTER_X, CENTER_Y, RADIUS/3, 0xffffddff);
+        filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i,
+                COLORS[NUM_LAYERS+NUM_BG_COLORS][0],
+                COLORS[NUM_LAYERS+NUM_BG_COLORS][1],
+                COLORS[NUM_LAYERS+NUM_BG_COLORS][2], 0x30*i/LAYERS);
+    filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS/3, 0xff, 0xff, 0xdd, 0xff);
+}
+
+void renderCelestialBodyByTime()
+{
+    using namespace std::chrono;
 }
 
 void quit(int sig)
