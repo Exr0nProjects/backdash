@@ -30,7 +30,7 @@ typedef std::array<unsigned char, 4> color_t;
 
 const size_t NUM_LAYERS = 6;
 const size_t NUM_BG_COLORS = 2;
-const color_t COLORS[NUM_LAYERS+NUM_BG_COLORS] = {
+const color_t COLORS[] = {
     { 50,  90,  240, 0xff },    // foreground layers
     { 97,  155, 255, 0xff },
     { 109, 178, 255, 0xff },
@@ -38,7 +38,8 @@ const color_t COLORS[NUM_LAYERS+NUM_BG_COLORS] = {
     { 145, 213, 255, 0xff },
     { 173, 219, 253, 0xff },
     {  64, 107, 191, 0xff },    // background gradient top
-    { 200, 109, 202, 0xff }     // background gradient bot
+    { 200, 109, 202, 0xff },    // background gradient bot
+    {0xff,0xee,0x20, 0xff }     // sun
 };
 
 int rng(int l, int r)
@@ -47,6 +48,8 @@ int rng(int l, int r)
 inline unsigned collapse_color(const color_t &c)
 { return c[0] << 24 | c[1] << 16 | c[2] << 8 | c[3]; }
 
+static SDL_Renderer * renderer;
+
 class Renderable
 {
 public:
@@ -54,7 +57,7 @@ public:
     // constructors
     Renderable(double x, double y, double w, double h): x(x), y(y), w(w), h(h) {}
     // methods
-    virtual void render(SDL_Renderer* renderer, double speed, color_t color)
+    virtual void render(double speed, color_t color)
     {
         std::cerr << "Attempted to render empty renderable!" << std::endl;
     }
@@ -68,9 +71,9 @@ public:
     // constructors
     Triangle(double x, double y, double w, double h): Renderable(x, y, w, h) {}
     // methods
-    void render(SDL_Renderer* renderer, double speed, color_t color)
+    void render(double speed, color_t color)
     {
-        filledTrigonRGBA(renderer, x, y, x+w/2, y-h, x+w, y, color[0], color[1], color[2], color[3]);
+        filledTrigonColor(renderer, x, y, x+w/2, y-h, x+w, y, collapse_color(color));
         x = (x - speed);
     }
 };
@@ -91,13 +94,13 @@ public:
         Layer(speed, bottom, scale, color, 0., nullptr) {}
     Layer(): Layer(0, 0, 0, {0xff, 0, 0, 0}) {};
     // methods
-    void render(SDL_Renderer* renderer)
+    void render()
     {
         // pop queue
         while (assets.size() && assets.front()->completed()) assets.pop_front();
         // draw
         for (auto &asset : assets)
-            asset->render(renderer, speed, color);
+            asset->render(speed, color);
         // push queue
         if (gen)
             while (!assets.size() || assets.back()->started())
@@ -105,7 +108,14 @@ public:
     }
 };
 
-static SDL_Renderer * renderer;
+
+void renderCelestialBody(double x, double y)
+{
+    for (int i=0; i<LAYERS; ++i)
+        filledCircleColor(renderer, CENTER_X, CENTER_Y, RADIUS*i,
+                collapse_color(COLORS[NUM_LAYERS+NUM_BG_COLORS]) & ~0xff | 0x30*i/LAYERS);
+    filledCircleColor(renderer, CENTER_X, CENTER_Y, RADIUS/3, 0xffffddff);
+}
 
 void quit(int sig)
 {
@@ -172,11 +182,10 @@ int main()
         SDL_SetRenderTarget(renderer, texture);
         SDL_RenderCopy(renderer, background, &center, NULL);
 
-        // draw the foreground
-        for (auto it=layers.rbegin(); it != layers.rend(); ++it) it->render(renderer);  // render layers
-        for (int i=0; i<LAYERS; ++i)                                                    // render sun
-            filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i, 0xff, 0xee, 0x20, 0x50*(i*i)/((LAYERS)*(LAYERS)));
-        filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS/2, 0xff, 0xff, 0xdd, 0xff);
+        // draw dynamic elements
+        for (auto it=layers.rbegin(); it != layers.rend(); ++it)
+            it->render();
+        renderCelestialBody(CENTER_X, CENTER_Y);    // TODO: day night cycle, move with the time
 
         // draw to the screen
         SDL_SetRenderTarget(renderer, NULL);
