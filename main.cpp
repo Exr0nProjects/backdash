@@ -30,26 +30,32 @@ const unsigned long SUNCOLOR = 0xee339900;
 typedef std::array<unsigned char, 4> color_t;
 
 const size_t NUM_LAYERS = 6;
-const color_t layer_colors[NUM_LAYERS] = {
-    { 50,  90,  240, 0xff },
+const size_t NUM_BG_COLORS = 2;
+const color_t COLORS[NUM_LAYERS+NUM_BG_COLORS] = {
+    { 50,  90,  240, 0xff },    // foreground layers
     { 97,  155, 255, 0xff },
     { 109, 178, 255, 0xff },
     { 128, 187, 255, 0xff },
     { 145, 213, 255, 0xff },
     { 173, 219, 253, 0xff },
+    {  64, 107, 191, 0xff },    // background gradient top
+    { 200, 109, 202, 0xff }     // background gradient bot
 };
 // background
-const int bg_width  = 3;    // width, height must be atleast 3 (1 color pixel + 2 edge padding pixels)
-const int bg_height = 4;    // apparently, this is bc windows bad.
-const unsigned bggradient[] = {
-    0x0000ffff, 0x0000ffff, 0x00f0ffff,
-    0x0000ffff, 0x0000ffff, 0x0000ffff,
-    0xff0000ff, 0xff0000ff, 0xff0000ff,
-    0xff0000ff, 0xff0000ff, 0xff0000ff,
-};
+//const int bg_width  = 3;    // width, height must be atleast 3 (1 color pixel + 2 edge padding pixels)
+//const int bg_height = 4;    // apparently, this is bc windows bad.
+//const unsigned bggradient[] = {
+//    0x0000ffff, 0x0000ffff, 0x00f0ffff,
+//    0x0000ffff, 0x0000ffff, 0x0000ffff,
+//    0xff0000ff, 0xff0000ff, 0xff0000ff,
+//    0xff0000ff, 0xff0000ff, 0xff0000ff,
+//};
 
 int rng(int l, int r)
 { return rand() % (r-l+1) + l; }
+
+inline unsigned collapse_color(const color_t &c)
+{ return c[0] << 24 | c[1] << 16 | c[2] << 8 | c[3]; }
 
 class Renderable
 {
@@ -130,7 +136,7 @@ int main()
         const int height_noise = 0*i;
         const int width = spacing * 1.30;
         const int width_noise = 20*i;
-        layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 1200., layer_colors[i-1], spacing,
+        layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 1200., COLORS[i-1], spacing,
             [=](double x, double y) -> Renderable* { return new Triangle(
                 x, y, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
             ); });
@@ -150,15 +156,19 @@ int main()
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, WIDTH, HEIGHT);
     SDL_EnableScreenSaver();                        // allow display to slee pwhile running: https://stackoverflow.com/a/39917503
     // init background texture
-    const SDL_Rect center = {1, 1, bg_width-2, bg_height-2};    // the center mask of the background to display
+    const SDL_Rect center = {1, 1, 1, NUM_BG_COLORS};    // the center mask of the background to display
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"1"); // low res texture based gradient: https://stackoverflow.com/a/42234816
     SDL_Texture * background = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,
-    SDL_TEXTUREACCESS_STREAMING,bg_width,bg_height);
+    SDL_TEXTUREACCESS_STREAMING,3,NUM_BG_COLORS+2);
     {
-        int bg_byte_width = 4*bg_width;
+        int bg_byte_width = 4;
         uint32_t * bgpixels;
         SDL_LockTexture(background,NULL,(void**)(&bgpixels),&bg_byte_width);
-        memcpy(bgpixels, bggradient, sizeof bggradient);
+        for (int i=0; i<3; ++i) bgpixels[i] = collapse_color(COLORS[NUM_LAYERS]),               // fill top band
+            bgpixels[3*NUM_BG_COLORS+i] = collapse_color(COLORS[NUM_LAYERS+NUM_BG_COLORS-1]);   // fill bot band
+        for (int j=0; j<NUM_BG_COLORS; ++j) for (int i=0; i<3; ++i)                             // fill center (visible area + sides)
+            bgpixels[(j+1)*3+i] = collapse_color(COLORS[NUM_LAYERS+j]);
+        //memcpy(bgpixels, bggradient, sizeof bggradient);
         SDL_UnlockTexture(background);
     }
 
