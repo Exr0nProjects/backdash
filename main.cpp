@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <X11/Xlib.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include "deps/simplexnoise.h"
 #include <cassert>
 #include <csignal>
 #include <chrono>
@@ -19,7 +20,7 @@ const int WIDTH = 3000;
 const int HEIGHT = 1920;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
-const double SPED = 0.05*FRAME_PERIOD.count();
+const double SPED = 0.01*FRAME_PERIOD.count();
 
 const int CENTER_X = 800;
 const int CENTER_Y = 600;
@@ -186,8 +187,12 @@ int main()
     }
 
     // event loop
+    int i=0;
+    SNoise a{};
+    printf("%lf\n", a.noise(0));
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
+        //printf("%f\n", SNoise::noise((float)++i));
         // draw background gradient to clear screen: https://stackoverflow.com/a/42234816
         SDL_SetRenderTarget(renderer, texture);
         SDL_RenderCopy(renderer, background, &center, NULL);
