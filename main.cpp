@@ -38,6 +38,15 @@ const color_t layer_colors[NUM_LAYERS] = {
     { 145, 213, 255, 0xff },
     { 173, 219, 253, 0xff },
 };
+// background
+const int bg_width  = 3;    // width, height must be atleast 3 (1 color pixel + 2 edge padding pixels)
+const int bg_height = 4;    // apparently, this is bc windows bad.
+const unsigned bggradient[] = {
+    0x0000ffff, 0x0000ffff, 0x00f0ffff,
+    0x0000ffff, 0x0000ffff, 0x0000ffff,
+    0xff0000ff, 0xff0000ff, 0xff0000ff,
+    0xff0000ff, 0xff0000ff, 0xff0000ff,
+};
 
 int rng(int l, int r)
 { return rand() % (r-l+1) + l; }
@@ -139,37 +148,20 @@ int main()
     SDL_Window *window = SDL_CreateWindowFrom((void*)x11w);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, WIDTH, HEIGHT);
-    SDL_EnableScreenSaver();    // https://stackoverflow.com/a/39917503
+    SDL_EnableScreenSaver();                        // allow display to slee pwhile running: https://stackoverflow.com/a/39917503
+    // init background texture
+    const SDL_Rect center = {1, 1, bg_width-2, bg_height-2};    // the center mask of the background to display
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"1"); // low res texture based gradient: https://stackoverflow.com/a/42234816
+    SDL_Texture * background = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,
+    SDL_TEXTUREACCESS_STREAMING,bg_width,bg_height);
+    {
+        int bg_byte_width = 4*bg_width;
+        uint32_t * bgpixels;
+        SDL_LockTexture(background,NULL,(void**)(&bgpixels),&bg_byte_width);
+        memcpy(bgpixels, bggradient, sizeof bggradient);
+        SDL_UnlockTexture(background);
+    }
 
-    // Set linear blending (haven't tried this with bilinear...)
-SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"1");
-
-// Create a 4x4 texture to serve as the source for our gradient.
-const int bg_width = 1;
-const int bg_height = 2;
-uint32_t * bgpixels;
-SDL_Texture * background = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,
-    SDL_TEXTUREACCESS_STREAMING,bg_width+2,bg_height+2);
-
-// Set up the gradient colors.
-// Each 2x2 quadrant of the texture has a separate color:
-
-// AABB
-// AABB
-// CCDD
-// CCDD
-int i = 4*bg_width;
-SDL_LockTexture(background,NULL,(void**)(&bgpixels),&i);
-bgpixels[0] = 0x0000ffff; bgpixels[1 ] = 0x0000ffff; bgpixels[2 ] = 0x00f0ffff;
-bgpixels[3] = 0x0000ffff; bgpixels[4 ] = 0x0000ffff; bgpixels[5 ] = 0x0000ffff;
-bgpixels[6] = 0xff0000ff; bgpixels[7 ] = 0xff0000ff; bgpixels[8 ] = 0xff0000ff;
-bgpixels[9] = 0xff0000ff; bgpixels[10] = 0xff0000ff; bgpixels[11] = 0xff0000ff;
-SDL_UnlockTexture(background);
-
-SDL_Rect center = {1, 1, bg_width, bg_height}; // We blit from the center 2x2 square to avoid a quirk in the Windows version
-
-// Blit it into place with the renderer.
-                            // target surface here.
     // event loop
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
