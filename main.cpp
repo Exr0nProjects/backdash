@@ -175,7 +175,8 @@ int main()
         // draw the foreground
         for (auto it=layers.rbegin(); it != layers.rend(); ++it) it->render(renderer);  // render layers
         for (int i=0; i<LAYERS; ++i)                                                    // render sun
-            filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i, 0xff, 0xee, 0x20, 0x40*i/LAYERS);
+            filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i, 0xff, 0xee, 0x20, 0x50*(i*i)/((LAYERS)*(LAYERS)));
+        filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS/2, 0xff, 0xff, 0xdd, 0xff);
 
         // draw to the screen
         SDL_SetRenderTarget(renderer, NULL);
