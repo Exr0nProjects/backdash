@@ -121,7 +121,10 @@ void renderCelestialBody(double x, double y)
 
 void renderCelestialBodyByTime()
 {
-    using namespace std::chrono;
+    //using namespace std::chrono; // https://stackoverflow.com/a/52895441
+    //std::cout << std::chrono::current_zone()->get_info(system_clock::now()) << std::endl;
+
+    renderCelestialBody(CENTER_X, CENTER_Y);    // TODO: day night cycle, move with the time
 }
 
 void quit(int sig)
@@ -192,7 +195,7 @@ int main()
         // draw dynamic elements
         for (auto it=layers.rbegin(); it != layers.rend(); ++it)
             it->render();
-        renderCelestialBody(CENTER_X, CENTER_Y);    // TODO: day night cycle, move with the time
+        renderCelestialBodyByTime();
 
         // draw to the screen
         SDL_SetRenderTarget(renderer, NULL);
