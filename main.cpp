@@ -97,6 +97,12 @@ public:
     }
 };
 
+void sigintHandler(int sig)
+{
+    printf("\nDying a horrible death..\n");
+    exit(sig);
+}
+
 int main()
 {
     // construct procedural layers
