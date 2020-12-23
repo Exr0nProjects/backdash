@@ -19,7 +19,7 @@ const int WIDTH = 3000;
 const int HEIGHT = 1920;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
-const double SPED = 0.2*FRAME_PERIOD.count();
+const double SPED = 0.05*FRAME_PERIOD.count();
 //const double SPED = 0.01*FRAME_PERIOD.count();
 
 const int CENTER_X = 800;
@@ -144,7 +144,6 @@ int main()
     // event loop
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
-        printf("\n");
         // clear, I guess?
         SDL_SetRenderTarget(renderer, texture);
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
