@@ -145,9 +145,11 @@ int main()
 SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"1");
 
 // Create a 4x4 texture to serve as the source for our gradient.
+const int bg_width = 1;
+const int bg_height = 2;
 uint32_t * bgpixels;
 SDL_Texture * background = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,
-    SDL_TEXTUREACCESS_STREAMING,4,4);
+    SDL_TEXTUREACCESS_STREAMING,bg_width+2,bg_height+2);
 
 // Set up the gradient colors.
 // Each 2x2 quadrant of the texture has a separate color:
@@ -156,27 +158,15 @@ SDL_Texture * background = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,
 // AABB
 // CCDD
 // CCDD
-int i = 16;
+int i = 4*bg_width;
 SDL_LockTexture(background,NULL,(void**)(&bgpixels),&i);
-bgpixels[0] = 0x0000ffff;
-bgpixels[1] = 0x0000ffff;
-bgpixels[2] = 0x00ff00ff;
-bgpixels[3] = 0x00ff00ff;
-bgpixels[4] = 0x0000ffff;
-bgpixels[5] = 0x0000ffff;
-bgpixels[6] = 0x00ff00ff;
-bgpixels[7] = 0x00ff00ff;
-bgpixels[8] = 0xff0000ff;
-bgpixels[9] = 0xff0000ff;
-bgpixels[10] = 0xffffffff;
-bgpixels[11] = 0xffffffff;
-bgpixels[12] = 0xff0000ff;
-bgpixels[13] = 0xff0000ff;
-bgpixels[14] = 0xffffffff;
-bgpixels[15] = 0xffffffff;
+bgpixels[0] = 0x0000ffff; bgpixels[1 ] = 0x0000ffff; bgpixels[2 ] = 0x00f0ffff;
+bgpixels[3] = 0x0000ffff; bgpixels[4 ] = 0x0000ffff; bgpixels[5 ] = 0x0000ffff;
+bgpixels[6] = 0xff0000ff; bgpixels[7 ] = 0xff0000ff; bgpixels[8 ] = 0xff0000ff;
+bgpixels[9] = 0xff0000ff; bgpixels[10] = 0xff0000ff; bgpixels[11] = 0xff0000ff;
 SDL_UnlockTexture(background);
 
-SDL_Rect center = {1, 1, 2, 2}; // We blit from the center 2x2 square to avoid a quirk in the Windows version
+SDL_Rect center = {1, 1, bg_width, bg_height}; // We blit from the center 2x2 square to avoid a quirk in the Windows version
 
 // Blit it into place with the renderer.
                             // target surface here.
@@ -188,19 +178,16 @@ SDL_Rect center = {1, 1, 2, 2}; // We blit from the center 2x2 square to avoid a
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
         SDL_RenderClear(renderer);
         // render background gradient: https://stackoverflow.com/a/42234816
+        SDL_RenderCopy(renderer, background, &center, NULL);
 
-        //// draw the scene
-        //for (auto it=layers.rbegin(); it != layers.rend(); ++it) it->render(renderer);
-        //// draw sky
-        //for (int i=0; i<LAYERS; ++i)
-        //    filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i, 0xff, 0xee, 0x20, 0x40*i/LAYERS);
+        // draw the scene
+        for (auto it=layers.rbegin(); it != layers.rend(); ++it) it->render(renderer);
+        // draw sky
+        for (int i=0; i<LAYERS; ++i)
+            filledCircleRGBA(renderer, CENTER_X, CENTER_Y, RADIUS*i, 0xff, 0xee, 0x20, 0x40*i/LAYERS);
         // draw to the screen?
         SDL_SetRenderTarget(renderer, NULL);
-        SDL_RenderCopy(renderer,    // The SDL 2D renderer we're using
-            background,             // The background texture
-            &center,
-            NULL);                  // The destination rectangle - just using the full
-        //SDL_RenderCopy(renderer, texture, NULL, NULL);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
         std::this_thread::sleep_for(FRAME_PERIOD);
     }
