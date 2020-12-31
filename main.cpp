@@ -16,11 +16,11 @@
 // TODO: auto-get height https://stackoverflow.com/questions/33393528/how-to-get-screen-size-in-sdl
 
 // config
-const int WIDTH = 3000;
-const int HEIGHT = 1920;
+//const int WIDTH = 3000; const int HEIGHT = 1920;
+const int WIDTH = 3840; const int HEIGHT = 1080;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
-const double SPED = 0.01*FRAME_PERIOD.count();
+const double SPED = 0.002*FRAME_PERIOD.count();
 
 const int CENTER_X = 800;
 const int CENTER_Y = 600;
@@ -38,7 +38,7 @@ const color_t COLORS[] = {
     { 128, 187, 255, 0xff },
     { 145, 213, 255, 0xff },
     { 173, 219, 253, 0xff },
-    {  64, 107, 191, 0xff },    // background gradient top
+    {  64,  87, 250, 0xff },    // background gradient top
     { 200, 109, 202, 0xff },    // background gradient bot
     {0xff,0xee,0x20, 0xff }     // sun
 };
@@ -145,12 +145,12 @@ int main()
     {
         // set procedural constants
         const double spacing = 200 * i - 160;
-        const double bottom = 1200;
+        const double bottom = 1080;
         const int height = 90 * i;
         const int height_noise = 0*i;
         const int width = spacing * 1.30;
         const int width_noise = 20*i;
-        layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 1200., COLORS[i-1], spacing,
+        layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing,
             [=](double x, double y) -> Renderable* { return new Triangle(
                 x, y, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
             ); });
@@ -188,8 +188,8 @@ int main()
 
     // event loop
     int i=0;
-    SNoise a{};
-    printf("%lf\n", a.noise(0));
+    //SNoise a{};
+    //printf("%lf\n", a.noise(0));
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
         //printf("%f\n", SNoise::noise((float)++i));
@@ -198,9 +198,9 @@ int main()
         SDL_RenderCopy(renderer, background, &center, NULL);
 
         // draw dynamic elements
+        renderCelestialBodyByTime();
         for (auto it=layers.rbegin(); it != layers.rend(); ++it)
             it->render();
-        renderCelestialBodyByTime();
 
         // draw to the screen
         SDL_SetRenderTarget(renderer, NULL);
