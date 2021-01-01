@@ -22,10 +22,11 @@ const int WIDTH = 3000; const int HEIGHT = 1920;
 //const int WIDTH = 3840; const int HEIGHT = 1080;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
-//const double SPED = 0.002*FRAME_PERIOD.count();
-const double SPED = 0.1*FRAME_PERIOD.count();
-const double NOISE_TIME_SCALE = 0.0001;
+const double SPED = 0.01*FRAME_PERIOD.count();
+//const double SPED = 0.3*FRAME_PERIOD.count();
+const double NOISE_TIME_SCALE = 0.0002*SPED;
 const double TERRAIN_AMPLITUDE = 40;
+const double TERRAIN_DEVIATION = 50;
 
 const int CENTER_X = 800;
 const int CENTER_Y = 600;
@@ -81,6 +82,7 @@ public:
     void render(double speed, color_t color)
     {
         filledTrigonRGBA(renderer, x, y, x+w/2, y-h, x+w, y, color[0], color[1], color[2], color[3]);
+        boxRGBA(renderer, x, y, x+w, HEIGHT, color[0], color[1], color[2], color[3]);
         x = (x - speed);
     }
 };
@@ -150,15 +152,15 @@ int main()
     for (int i=1; i<=NUM_LAYERS; ++i)
     {
         // set procedural constants
-        const double spacing = 180 * i - 160;
-        const double bottom = 1080;
-        const int height = 90 * i;
+        const double spacing = 220 * i - 190;
+        const double bottom = 1400-40*i;
+        const int height = 100 * i;
         const int height_noise = 0*i;
         const int width = spacing * 1.50;
         const int width_noise = 10*i;
         layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing,
             [=](double time, double x, double y) -> Renderable* { return new Triangle(
-                x, y+SNoise::noise(time)*TERRAIN_AMPLITUDE*(NUM_LAYERS-i), width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
+                x, y+SNoise::noise(time)*(TERRAIN_AMPLITUDE+TERRAIN_DEVIATION*(NUM_LAYERS-i)), width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
             ); });
     }
 
