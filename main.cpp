@@ -22,8 +22,10 @@ const int WIDTH = 3000; const int HEIGHT = 1920;
 //const int WIDTH = 3840; const int HEIGHT = 1080;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
-const double SPED = 0.002*FRAME_PERIOD.count();
-const double NOISE_TIME_SCALE = 0.002;
+//const double SPED = 0.002*FRAME_PERIOD.count();
+const double SPED = 0.1*FRAME_PERIOD.count();
+const double NOISE_TIME_SCALE = 0.0001;
+const double TERRAIN_AMPLITUDE = 40;
 
 const int CENTER_X = 800;
 const int CENTER_Y = 600;
@@ -88,18 +90,18 @@ class Layer
 public:
     double speed, bottom, scale, spacing;
     color_t color;
-    std::function<Renderable*(double, double)> gen;
+    std::function<Renderable*(double, double, double)> gen;
     std::deque<std::unique_ptr<Renderable> > assets;    // invariant: sorted by x
     // constructors
     Layer(double speed, double bottom, double scale, color_t color,
-            double spacing, std::function<Renderable*(double, double)> generator):
+            double spacing, std::function<Renderable*(double, double, double)> generator):
         speed(speed), bottom(bottom), scale(scale), color(color),
         spacing(spacing), gen(generator) {}
     Layer(double speed, double bottom, double scale, color_t color):
         Layer(speed, bottom, scale, color, 0., nullptr) {}
     Layer(): Layer(0, 0, 0, {0xff, 0, 0, 0}) {};
     // methods
-    void render()
+    void render(double time)
     {
         // pop queue
         while (assets.size() && assets.front()->completed()) assets.pop_front();
@@ -109,7 +111,7 @@ public:
         // push queue
         if (gen)
             while (!assets.size() || assets.back()->started())
-                assets.emplace_back(gen((assets.size()?assets.back()->x:-10) + spacing, bottom));
+                assets.emplace_back(gen(time, (assets.size()?assets.back()->x:-10) + spacing, bottom));
     }
 };
 
@@ -148,15 +150,15 @@ int main()
     for (int i=1; i<=NUM_LAYERS; ++i)
     {
         // set procedural constants
-        const double spacing = 200 * i - 160;
+        const double spacing = 180 * i - 160;
         const double bottom = 1080;
         const int height = 90 * i;
         const int height_noise = 0*i;
-        const int width = spacing * 1.30;
-        const int width_noise = 20*i;
+        const int width = spacing * 1.50;
+        const int width_noise = 10*i;
         layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing,
-            [=](double x, double y) -> Renderable* { return new Triangle(
-                x, y, width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
+            [=](double time, double x, double y) -> Renderable* { return new Triangle(
+                x, y+SNoise::noise(time)*TERRAIN_AMPLITUDE*(NUM_LAYERS-i), width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
             ); });
     }
 
@@ -194,14 +196,10 @@ int main()
     float i=0;
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
-
+        // calculate current time synced noise 'location'
         const auto now = (std::chrono::system_clock::now()-SHIFT).time_since_epoch();
         const auto shift = std::chrono::duration_cast<std::chrono::milliseconds>(now);
         const double cur = (double)(shift.count())*NOISE_TIME_SCALE;
-
-        int dist = SNoise::noise(cur)*45;
-
-        for (int i=-46; i<=dist; ++i) printf(" "); printf("#\n");
 
         // draw background gradient to clear screen: https://stackoverflow.com/a/42234816
         SDL_SetRenderTarget(renderer, texture);
@@ -210,7 +208,7 @@ int main()
         // draw dynamic elements
         renderCelestialBodyByTime();
         for (auto it=layers.rbegin(); it != layers.rend(); ++it)
-            it->render();
+            it->render(cur);
 
         // draw to the screen
         SDL_SetRenderTarget(renderer, NULL);
