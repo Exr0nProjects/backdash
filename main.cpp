@@ -16,8 +16,8 @@
 // TODO: auto-get height https://stackoverflow.com/questions/33393528/how-to-get-screen-size-in-sdl
 
 // config
-//const int WIDTH = 3000; const int HEIGHT = 1920;
-const int WIDTH = 3840; const int HEIGHT = 1080;
+const int WIDTH = 3000; const int HEIGHT = 1920;
+//const int WIDTH = 3840; const int HEIGHT = 1080;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
 const double SPED = 0.002*FRAME_PERIOD.count();
@@ -188,10 +188,9 @@ int main()
 
     // event loop
     int i=0;
-    //SNoise a{};
-    //printf("%lf\n", a.noise(0));
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
+        printf("%15.10f\n", SNoise::noise(i/1000)); ++i;
         //printf("%f\n", SNoise::noise((float)++i));
         // draw background gradient to clear screen: https://stackoverflow.com/a/42234816
         SDL_SetRenderTarget(renderer, texture);

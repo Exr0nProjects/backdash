@@ -36,7 +36,7 @@
 class SNoise {
 
   public:
-    SNoise() { printf("hello world\n"); }
+    SNoise() {}
     ~SNoise() {}
 
 /** 1D float Perlin noise
@@ -45,7 +45,7 @@ class SNoise {
 
 /** 1D float Perlin noise, with a specified integer period
  */
-    static float pnoise( float x, int px );
+    //static float pnoise( float x, int px );
 
   private:
     static unsigned char perm[];
