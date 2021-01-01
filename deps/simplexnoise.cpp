@@ -104,36 +104,36 @@ unsigned char SNoise::perm[512] = {151,160,137,91,90,15,
  * float SLnoise = (SimplexNoise1234::noise(x,y,z) + 1.0) * 0.5;
  */
 
-float  SNoise::grad( int hash, float x ) {
+double  SNoise::grad( int hash, double x ) {
     int h = hash & 15;
-    float grad = 1.0f + (h & 7);   // Gradient value 1.0, 2.0, ..., 8.0
+    double grad = 1.0f + (h & 7);   // Gradient value 1.0, 2.0, ..., 8.0
     if (h&8) grad = -grad;         // Set a random sign for the gradient
     return ( grad * x );           // Multiply the gradient with the distance
 }
 
 // 1D simplex noise
-float SNoise::noise(float x) {
+double SNoise::noise(double x) {
 
   int i0 = FASTFLOOR(x);
   int i1 = i0 + 1;
-  float x0 = x - i0;
-  float x1 = x0 - 1.0f;
+  double x0 = x - i0;
+  double x1 = x0 - 1.0f;
 
-  float n0, n1;
+  double n0, n1;
 
-  float t0 = 1.0f - x0*x0;
+  double t0 = 1.0f - x0*x0;
 //  if(t0 < 0.0f) t0 = 0.0f;
   t0 *= t0;
   n0 = t0 * t0 * grad(perm[i0 & 0xff], x0);
 
-  float t1 = 1.0f - x1*x1;
+  double t1 = 1.0f - x1*x1;
 //  if(t1 < 0.0f) t1 = 0.0f;
   t1 *= t1;
   n1 = t1 * t1 * grad(perm[i1 & 0xff], x1);
   // The maximum value of this noise is 8*(3/4)^4 = 2.53125
   // A factor of 0.395 would scale to fit exactly within [-1,1], but
   // we want to match PRMan's 1D noise, so we scale it down some more.
-  return 0.25f * (n0 + n1);
+  return 0.395f * (n0 + n1);
 
 }
 

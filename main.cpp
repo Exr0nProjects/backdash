@@ -1,6 +1,8 @@
 #include <SDL2/SDL.h>
 #include <X11/Xlib.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include <sys/ioctl.h>
+#include <unistd.h> // https://stackoverflow.com/a/23369919
 #include "deps/simplexnoise.h"
 #include <cassert>
 #include <csignal>
@@ -21,6 +23,7 @@ const int WIDTH = 3000; const int HEIGHT = 1920;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
 const double SPED = 0.002*FRAME_PERIOD.count();
+const double NOISE_TIME_SCALE = 0.002;
 
 const int CENTER_X = 800;
 const int CENTER_Y = 600;
@@ -43,6 +46,7 @@ const color_t COLORS[] = {
     {0xff,0xee,0x20, 0xff }     // sun
 };
 
+const auto SHIFT = std::chrono::seconds(1577865600); // 50 years
 int rng(int l, int r)
 { return rand() % (r-l+1) + l; }
 
@@ -187,11 +191,18 @@ int main()
     }
 
     // event loop
-    int i=0;
+    float i=0;
     for (SDL_Event event = {}; event.type != SDL_QUIT; SDL_PollEvent(&event))
     {
-        printf("%15.10f\n", SNoise::noise(i/1000)); ++i;
-        //printf("%f\n", SNoise::noise((float)++i));
+
+        const auto now = (std::chrono::system_clock::now()-SHIFT).time_since_epoch();
+        const auto shift = std::chrono::duration_cast<std::chrono::milliseconds>(now);
+        const double cur = (double)(shift.count())*NOISE_TIME_SCALE;
+
+        int dist = SNoise::noise(cur)*45;
+
+        for (int i=-46; i<=dist; ++i) printf(" "); printf("#\n");
+
         // draw background gradient to clear screen: https://stackoverflow.com/a/42234816
         SDL_SetRenderTarget(renderer, texture);
         SDL_RenderCopy(renderer, background, &center, NULL);

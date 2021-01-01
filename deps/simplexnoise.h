@@ -41,7 +41,7 @@ class SNoise {
 
 /** 1D float Perlin noise
  */
-    static float noise( float x );
+    static double noise( double x );
 
 /** 1D float Perlin noise, with a specified integer period
  */
@@ -49,6 +49,6 @@ class SNoise {
 
   private:
     static unsigned char perm[];
-    static float grad( int hash, float x );
+    static double grad( int hash, double x );
 };
 
