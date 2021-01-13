@@ -23,8 +23,8 @@ const int WIDTH = 3000; const int HEIGHT = 1920;
 //const int WIDTH = 3840; const int HEIGHT = 1080;
 
 const auto FRAME_PERIOD = std::chrono::milliseconds(10);
-const double SPED = 0.01*FRAME_PERIOD.count();
-//const double SPED = 0.3*FRAME_PERIOD.count();
+// const double SPED = 0.01*FRAME_PERIOD.count();
+const double SPED = 0.5*FRAME_PERIOD.count();
 const double NOISE_TIME_SCALE = 0.0002*SPED;
 const double TERRAIN_AMPLITUDE = 40;
 const double TERRAIN_DEVIATION = 50;
@@ -92,14 +92,13 @@ class PolyTerrain : public Renderable
 {
 	double h1, h2;
 public:
-	PolyTerrain(double x, double y, double w, double h1, double h2): Renderable(x, y, w, std::max(h1, h2)), h1(h1), h2(h2)
-	{
-		if (h1 > h2) std::swap(h1, h2); // maintain h1 < h2
-	}
+	PolyTerrain(double x, double y, double w, double h1, double h2):
+		Renderable(x, y, w, std::max(h1, h2)), h1(h1), h2(h2) {}
 	void render(double speed, const color_t& color)
 	{
-		filledTrigonRGBA(renderer, x, y-h1, x, y-h2, x+w, y-h1, color[0], color[1], color[2], color[3]);
-		boxRGBA(renderer, x, y-h1, x+w, HEIGHT, color[0], color[1], color[2], color[3]);
+		filledTrigonRGBA(renderer, x, y-std::min(h1, h2), x+(w*(bool)(h1<h2)), y-std::max(h1, h2), x+w, y-std::min(h1, h2), color[0], color[1], color[2], color[3]);
+		boxRGBA(renderer, x, y-std::min(h1, h2), x+w, HEIGHT, color[0], color[1], color[2], color[3]);
+		x = (x - speed);
 	}
 };
 
@@ -108,11 +107,12 @@ class Layer
 public:
     double speed, bottom, scale, spacing;
     color_t color;
-    std::function<Renderable*(double, double, double)> gen;
+	std::function<Renderable*(double, double, double, double)> gen;
     std::deque<std::unique_ptr<Renderable> > assets;    // invariant: sorted by x
+	double previous_time = 0;
     // constructors
     Layer(double speed, double bottom, double scale, color_t color,
-            double spacing, std::function<Renderable*(double, double, double)> generator):
+          double spacing, std::function<Renderable*(double, double, double, double)> generator):
         speed(speed), bottom(bottom), scale(scale), color(color),
         spacing(spacing), gen(generator) {}
     Layer(double speed, double bottom, double scale, color_t color):
@@ -126,10 +126,13 @@ public:
         // draw
         for (auto &asset : assets)
             asset->render(speed, color);
+        const double current_time = time;
         // push queue
         if (gen)
-            while (!assets.size() || assets.back()->started())
-                assets.emplace_back(gen(time, (assets.size()?assets.back()->x:-10) + spacing, bottom));
+            while (!assets.size() || assets.back()->started()) {
+	            assets.emplace_back(gen(previous_time, current_time, (assets.size()?assets.back()->x:-10) + spacing, bottom));
+				previous_time = current_time;
+            }
     }
 };
 
@@ -174,16 +177,18 @@ int main()
         const int height_noise = 0*i;
         const int width = spacing * 1.50;
         const int width_noise = 10*i;
-        if (i < 4 || i == NUM_LAYERS)
+        if (i == 1 || i == NUM_LAYERS)
 			layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing,
-				[=](double time, double x, double y) -> Renderable* { return new Triangle(
-					x, y+SNoise::noise(time)*(TERRAIN_AMPLITUDE+TERRAIN_DEVIATION*(NUM_LAYERS-i)), width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
+				[=](double t1, double t2, double x, double y) -> Renderable* { return new Triangle(
+					x, y+SNoise::noise(t1)*(TERRAIN_AMPLITUDE+TERRAIN_DEVIATION*(NUM_LAYERS-i)), width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
 				); });
+			//                     nullptr);
         else
-			layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing,
-				[=](double time, double x, double y) -> Renderable* { return new PolyTerrain(
-					x, y+SNoise::noise(time)*(TERRAIN_AMPLITUDE+TERRAIN_DEVIATION*(NUM_LAYERS-i)), spacing, height
-				); });
+	        layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing/3,
+				[=](double t1, double t2, double x, double y) -> Renderable* {
+					// printf("prev %lf now %lf\n", (SNoise::noise(t1)+1)*height, (SNoise::noise(t2)+1)*height);
+					return new PolyTerrain(x, y, spacing/3, (SNoise::noise(t1/i)+0.7)*height, (SNoise::noise(t2/i)+0.7)*height);
+				});
     }
 
     // init window
