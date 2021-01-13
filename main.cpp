@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <functional>
 // TODO: auto-get height https://stackoverflow.com/questions/33393528/how-to-get-screen-size-in-sdl
+// TODO: smooth generation breaks when display turned off, etc
 
 // config
 const int WIDTH = 3000; const int HEIGHT = 1920;
@@ -65,7 +66,7 @@ public:
     // constructors
     Renderable(double x, double y, double w, double h): x(x), y(y), w(w), h(h) {}
     // methods
-    virtual void render(double speed, color_t color)
+    virtual void render(double speed, const color_t& color)
     {
         std::cerr << "Attempted to render empty renderable!" << std::endl;
     }
@@ -77,14 +78,29 @@ class Triangle : public Renderable
 {
 public:
     // constructors
-    Triangle(double x, double y, double w, double h): Renderable(x, y, w, h) {}
+	Triangle(double x, double y, double w, double h): Renderable(x, y, w, h) {}
     // methods
-    void render(double speed, color_t color)
+    void render(double speed, const color_t& color)
     {
         filledTrigonRGBA(renderer, x, y, x+w/2, y-h, x+w, y, color[0], color[1], color[2], color[3]);
         boxRGBA(renderer, x, y, x+w, HEIGHT, color[0], color[1], color[2], color[3]);
         x = (x - speed);
     }
+};
+
+class PolyTerrain : public Renderable
+{
+	double h1, h2;
+public:
+	PolyTerrain(double x, double y, double w, double h1, double h2): Renderable(x, y, w, std::max(h1, h2)), h1(h1), h2(h2)
+	{
+		if (h1 > h2) std::swap(h1, h2); // maintain h1 < h2
+	}
+	void render(double speed, const color_t& color)
+	{
+		filledTrigonRGBA(renderer, x, y-h1, x, y-h2, x+w, y-h1, color[0], color[1], color[2], color[3]);
+		boxRGBA(renderer, x, y-h1, x+w, HEIGHT, color[0], color[1], color[2], color[3]);
+	}
 };
 
 class Layer
@@ -158,10 +174,16 @@ int main()
         const int height_noise = 0*i;
         const int width = spacing * 1.50;
         const int width_noise = 10*i;
-        layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing,
-            [=](double time, double x, double y) -> Renderable* { return new Triangle(
-                x, y+SNoise::noise(time)*(TERRAIN_AMPLITUDE+TERRAIN_DEVIATION*(NUM_LAYERS-i)), width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
-            ); });
+        if (i < 4 || i == NUM_LAYERS)
+			layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing,
+				[=](double time, double x, double y) -> Renderable* { return new Triangle(
+					x, y+SNoise::noise(time)*(TERRAIN_AMPLITUDE+TERRAIN_DEVIATION*(NUM_LAYERS-i)), width+rng(-width_noise, width_noise), height+rng(-height_noise, height_noise)
+				); });
+        else
+			layers[i-1] = Layer(SPED*(NUM_LAYERS-i+1), bottom, 0., COLORS[i-1], spacing,
+				[=](double time, double x, double y) -> Renderable* { return new PolyTerrain(
+					x, y+SNoise::noise(time)*(TERRAIN_AMPLITUDE+TERRAIN_DEVIATION*(NUM_LAYERS-i)), spacing, height
+				); });
     }
 
     // init window
@@ -222,4 +244,3 @@ int main()
     // clean up
     quit(0);
 }
-
